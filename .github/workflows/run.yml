@@ -5,9 +5,10 @@ permissions:
 
 on:
   schedule:
-    - cron: "30-59/5 11 * * 1-5"
-    - cron: "*/5 12-18 * * 1-5"
-    - cron: "0-30/5 19 * * 1-5"
+    - cron: "*/5 * * * *"
+    #- cron: "30-59/5 11 * * 1-5"
+    #- cron: "*/5 12-18 * * 1-5"
+    #- cron: "0-30/5 19 * * 1-5"
 
   workflow_dispatch:
 
