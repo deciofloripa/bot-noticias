@@ -1,35 +1,12 @@
-name: Noticias Bot
-#testes
-permissions:
-  contents: write
+name: Teste Agendador
 
 on:
   schedule:
     - cron: "*/2 * * * *"
-    #- cron: "30-59/5 11 * * 1-5"
-    #- cron: "*/5 12-18 * * 1-5"
-    #- cron: "0-30/5 19 * * 1-5"
-
   workflow_dispatch:
 
 jobs:
-  run-bot:
+  teste:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run bot
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python feed_noticias_github.py
+      - run: echo "AGENDADOR FUNCIONANDO"
