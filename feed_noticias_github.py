@@ -6,7 +6,8 @@ import feedparser
 #import time
 #from funcoes         import HoraMinuto
 from deep_translator import MyMemoryTranslator
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 
 # CONFIGURAÇÕES
@@ -70,6 +71,9 @@ def relevante(titulo):
     t = titulo.lower()
     return any(k in t for k in KEYWORDS)
 
+def agora_brasil():
+    return datetime.now(ZoneInfo("America/Sao_Paulo"))
+
 # 🧠 RESUMO ESTILO TRADER
 def resumir_trader(titulo):
     t = titulo.lower()
@@ -126,7 +130,7 @@ def run_once():
     vistos = carregar_vistos()
     noticias = buscar(vistos)
     if noticias:
-        agora = datetime.now().strftime("%d/%m %H:%M:%S")
+        agora = agora_brasil().strftime("%d/%m %H:%M:%S")
         print(f"🔄 Atualizando {agora}")
         for n in noticias:
             titulo_en = n['titulo']
@@ -134,7 +138,7 @@ def run_once():
             resumo = resumir_trader(titulo_en)
             impacto = classificar_impacto(titulo_en)
             msg = (
-                    f"🕒 {datetime.now().strftime('%H:%M')}\n"
+                    f"🕒 {agora_brasil().strftime('%H:%M')}\n"
                     f"{impacto}\n"
                     f"📰 {titulo_pt}\n"
                     f"📊 {resumo}\n"
@@ -146,7 +150,7 @@ def run_once():
     salvar_vistos(vistos)
 
 #def dentro_do_horario():
-#    agora = datetime.now()
+#    agora = agora_brasil()
 #    if agora.weekday() >= 5:
 #        return False
 #    return (500 <= HoraMinuto()[0] <= 990) # 8h20~16h30
