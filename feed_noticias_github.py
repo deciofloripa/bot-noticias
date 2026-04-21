@@ -167,9 +167,10 @@ def loop_controlado():
         time.sleep(120)  # 2 minutos
 
 def loop():
+    print("🚀 Bot rodando continuamente...\n")
     while True:
         run_once()
-        time.sleep(120)
+        time.sleep(120)  # 2 minutos
 
 app = Flask(__name__)
 @app.route("/")
