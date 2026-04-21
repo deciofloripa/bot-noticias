@@ -109,7 +109,7 @@ def buscar(vistos):
                 link = e.link.strip()
                 if link in vistos:
                     continue
-                vistos.add(link)
+                vistos.add(link + titulo)
                 if relevante(titulo):
                     noticias.append({
                         "titulo": titulo,
