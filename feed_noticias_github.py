@@ -1,4 +1,4 @@
-# Feed de notícias guardado no github e executado 24h pelo Render
+# Feed de notícias guardado no github e rodando 24h no Render
 from os import getenv
 from deep_translator import MyMemoryTranslator
 from requests   import post
@@ -28,7 +28,6 @@ KEYWORDS = [
     "stocks", "nasdaq", "sp500", "dow jones"
 ]
 
-vistos = set()
 translator = MyMemoryTranslator(source='en-US', target='pt-BR')
 
 # FUNÇÕES
@@ -106,9 +105,13 @@ def buscar(vistos):
             for e in feed.entries:
                 titulo = e.title.strip()
                 link = e.link.strip()
-                if link in vistos:
+                
+                #evita duplicação de notícias
+                chave = titulo.lower().strip()
+                if chave in vistos:
                     continue
-                vistos.add(link + titulo)
+                vistos.add(chave)
+
                 if relevante(titulo):
                     noticias.append({
                         "titulo": titulo,
@@ -118,7 +121,9 @@ def buscar(vistos):
     return noticias
 
 def run_once():
-    vistos = carregar_vistos()
+    global vistos
+    if len(vistos) > 500:
+        vistos = set(list(vistos)[-500:])
     noticias = buscar(vistos)
     if noticias:
         agora = agora_brasil().strftime("%d/%m %H:%M:%S")
@@ -143,17 +148,23 @@ def run_once():
 def loop():
     print("🚀 Bot rodando continuamente...\n")
     while True:
-        run_once()
-        sleep(120)  # 2 minutos
+        try:
+            run_once()
+        except Exception as e:
+            print("Erro no loop:", e)
+        sleep(120)  # 2 minutos      
 
+# Flask - Exigência do Render
 app = Flask(__name__)
-@app.route("/")
 
+@app.route("/")
 def home():
     return "Bot rodando!"
 
 def iniciar_bot():
     loop()
+
+vistos = carregar_vistos()
 
 if __name__ == "__main__":
     Thread(target=iniciar_bot).start()
