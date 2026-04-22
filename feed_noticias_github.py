@@ -21,13 +21,6 @@ FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
 ]
-KEYWORDS = [
-    "fed", "interest rate", "inflation", "cpi",
-    "central bank", "fomc", "economy",
-    "oil", "dollar", "treasury", "bond",
-    "payroll", "gdp", "recession",
-    "stocks", "nasdaq", "sp500", "dow jones"
-]
 
 translator = MyMemoryTranslator(source='en-US', target='pt-BR')
 
