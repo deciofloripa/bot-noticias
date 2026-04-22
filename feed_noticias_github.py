@@ -135,6 +135,38 @@ def buscar(vistos):
             print("Erro feed:", url)
     return noticias
 
+def classificar_wdo(titulo):
+    t = titulo.lower()
+    score = 0
+    motivo = []
+    # 🔥 EVENTOS QUE MOVEM FORTE, ...
+    if any(k in t for k in ["fed", "fomc", "interest rate", "rates"]):
+        score += 5
+        motivo.append("Juros/Fed")
+    if any(k in t for k in ["cpi", "inflation", "pce"]):
+        score += 5
+        motivo.append("Inflação")
+    if any(k in t for k in ["payroll", "nonfarm", "jobs report"]):
+        score += 5
+        motivo.append("Emprego EUA")
+    # ⚠️ E MÉDIO
+    if any(k in t for k in ["treasury", "bond", "yield"]):
+        score += 3
+        motivo.append("Juros mercado")
+    if any(k in t for k in ["dollar", "usd", "currency"]):
+        score += 3
+        motivo.append("Moedas")
+    if any(k in t for k in ["oil", "crude"]):
+        score += 3
+        motivo.append("Petróleo")
+    # 🧨 GEOPOLÍTICO (muito importante)
+    if any(k in t for k in ["war", "iran", "china", "russia", "conflict", "strait"]):
+        score += 4
+        motivo.append("Geopolítica")
+    # 🚨 BREAKING
+    breaking = any(k in t for k in ["breaking", "urgent", "alert"])
+    return score, motivo, breaking
+
 def run_once():
     global vistos
     if len(vistos) > 500:
@@ -152,16 +184,19 @@ def run_once():
             titulo_en = n['titulo']
             titulo_pt = traduzir(titulo_en)
             resumo = resumir_trader(titulo_en)
-            impacto = classificar_impacto(titulo_en)
-            msg = (
+            score_wdo, motivos, breaking = classificar_wdo(titulo_en)
+            if score_wdo >= 4 or breaking: # quanto menor, mais sensível
+                alerta = "🚨 BREAKING NEWS\n" if breaking else ""
+                msg = (
+                    f"{alerta}"
                     f"🕒 {data_noticia.strftime('%H:%M')}\n"
-                    f"{impacto}\n"
+                    f"💰 IMPACTO WDO: {score_wdo}\n"
+                    f"📌 {' | '.join(motivos)}\n"
                     f"📰 {titulo_pt}\n"
                     f"📊 {resumo}\n"
                     f"{n['link']}"
-            )
-            print(msg + "\n")
-            if impacto != BAIXO_IMP:
+                )
+                print(msg + "\n")
                 enviar_telegram(msg)
     salvar_vistos(vistos)
 
