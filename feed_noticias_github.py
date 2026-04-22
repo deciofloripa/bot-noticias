@@ -40,7 +40,11 @@ def salvar_vistos(vistos):
 
 def enviar_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {"chat_id": CHAT_ID, "text": msg}
+    data = {
+        "chat_id": CHAT_ID,
+        "text": msg,
+        "disable_web_page_preview": True
+    }
     try:
         post(url, data=data, timeout=10)
     except:
