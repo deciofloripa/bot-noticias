@@ -70,7 +70,7 @@ def agora_brasil():
 def ajustar_data(pubDate, fonte):
     try:
         dt = parser.parse(pubDate)
-        if "yahoo" in fonte.lower():
+        if dt.tzinfo is None:
             dt = dt.replace(tzinfo=ZoneInfo("UTC"))
         return dt.astimezone(ZoneInfo("America/Sao_Paulo"))
     except Exception as e:
