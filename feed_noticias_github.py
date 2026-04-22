@@ -67,11 +67,13 @@ def relevante(titulo):
 def agora_brasil():
     return datetime.now(ZoneInfo("America/Sao_Paulo"))
 
-def ajustar_data(pubDate):
+def ajustar_data(pubDate, fonte):
     try:
         dt = parser.parse(pubDate)
+        if "yahoo" in fonte.lower():
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
         return dt.astimezone(ZoneInfo("America/Sao_Paulo"))
-    except:
+    except Exception as e:
         return agora_brasil()
     
 # 🧠 RESUMO ESTILO TRADER
@@ -126,7 +128,8 @@ def buscar(vistos):
                     noticias.append({
                         "titulo": titulo,
                         "link": link,
-                        "data": e.get("published", "")
+                        "data": e.get("published", ""),
+                        "fonte": url
                     })
         except:
             print("Erro feed:", url)
@@ -141,7 +144,7 @@ def run_once():
         agora = agora_brasil().strftime("%d/%m %H:%M:%S")
         print(f"🔄 Atualizando {agora}")
         for n in noticias:
-            data_noticia = ajustar_data(n.get("data", ""))
+            data_noticia = ajustar_data(n.get("data", ""), n.get("fonte", ""))
             if data_noticia < agora_brasil() - timedelta(hours=2):
                 continue
             titulo_en = n['titulo']
