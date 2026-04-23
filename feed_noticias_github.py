@@ -194,10 +194,11 @@ def run_once():
             motivo_txt = " | ".join(motivos) if motivos else "Macro"
             if score_wdo >= 4 or breaking: # quanto menor, mais sensível
                 alerta = "🚨 BREAKING NEWS\n" if breaking else ""
+                score_bold = f"💰 IMPACTO WDO: {score_wdo}\n" if score_wdo < 7 else f"💰 <b>IMPACTO WDO: {score_wdo}</b>\n"
                 msg = (
                     f"{alerta}"
                     f"🕒 {data_noticia.strftime('%H:%M')}\n"
-                    f"💰 IMPACTO WDO: {score_wdo}\n"
+                    score_bold
                     f"📌 {motivo_txt}\n"
                     f"📰 <b>{titulo_pt}</b>\n"
                     f"📊 {resumo}\n"
