@@ -201,7 +201,7 @@ def run_once():
                     f"📌 {motivo_txt}\n"
                     f"📰 <b>{titulo_pt}</b>\n"
                     f"📊 {resumo}\n"
-                    f"<a href='{n["link"]}'</a>"
+                    f"<a href='{n["link"]}'>Ler notícia</a>"
                 )
                 print(msg + "\n")
                 enviar_telegram(msg)
