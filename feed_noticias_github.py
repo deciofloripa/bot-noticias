@@ -1,15 +1,15 @@
 # Feed de notícias guardado no github e rodando 24h no Render
-from deep_translator import MyMemoryTranslator, GoogleTranslator
+import os
+import json
 from requests   import post
 from time       import sleep, time
 from datetime   import datetime, timedelta
 from zoneinfo   import ZoneInfo
 from dateutil   import parser #pip install python-dateutil
 from feedparser import parse
+from gc         import collect
 from flask      import Flask
 from threading  import Thread
-import os
-import json
 
 # CONFIGURAÇÕES
 ALTO_IMP  = "🔥 ALTO IMPACTO"
@@ -21,9 +21,6 @@ FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
 ]
-
-translator_memory = MyMemoryTranslator(source='en-US', target='pt-BR')
-translator_google = GoogleTranslator(source='auto', target='pt')
 
 # FUNÇÕES
 def carregar_vistos():
@@ -52,8 +49,10 @@ def enviar_telegram(msg):
         print("Erro Telegram")
 
 def traduzir(texto, tentativas=2):
+    from deep_translator import MyMemoryTranslator, GoogleTranslator
     for i in range(tentativas): # Tenta MyMemory
         try:
+            translator_memory = MyMemoryTranslator(source='en-US', target='pt-BR')
             sleep(0.2)
             return translator_memory.translate(texto)
         except:
@@ -61,12 +60,12 @@ def traduzir(texto, tentativas=2):
 
     for i in range(tentativas): # Tenta Google
         try:
+            translator_google = GoogleTranslator(source='auto', target='pt')
             sleep(0.2)
             return translator_google.translate(texto)
         except:
             sleep(0.5)
 
-    print("⚠️ Falha total tradução:", texto) # Fallback final
     return f"(EN) {texto}"
 
 def agora_brasil():
@@ -192,7 +191,7 @@ def run_once():
             resumo = resumir_trader(titulo_en)
             score_wdo, motivos, breaking = classificar_wdo(titulo_en)
             motivo_txt = " | ".join(motivos) if motivos else "Macro"
-            if score_wdo >= 4 or breaking: # quanto menor, mais sensível
+            if score_wdo > 5 or breaking: # quanto menor, mais sensível
                 alerta = "🚨 BREAKING NEWS\n" if breaking else ""
                 msg = (
                     f"{alerta}"
@@ -206,6 +205,7 @@ def run_once():
                 print(msg + "\n")
                 enviar_telegram(msg)
     salvar_vistos(vistos)
+    collect()
 
 def loop():
     print("🚀 Bot rodando continuamente...\n")
@@ -234,4 +234,4 @@ vistos = carregar_vistos()
 
 if __name__ == "__main__":
     Thread(target=iniciar_bot).start()
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0", port=10000, threaded=False)
