@@ -1,15 +1,19 @@
 # Feed de notícias guardado no github e rodando 24h no Render
 import os
 import json
-from requests   import post
-from time       import sleep, time
-from datetime   import datetime, timedelta
-from zoneinfo   import ZoneInfo
-from dateutil   import parser #pip install python-dateutil
-from feedparser import parse
-from gc         import collect
-from flask      import Flask
-from threading  import Thread
+from unicodedata import normalize
+from re          import sub
+from difflib     import SequenceMatcher
+from base64      import b64decode, b64encode
+from requests    import get, put, post
+from time        import sleep, time
+from datetime    import datetime, timedelta
+from zoneinfo    import ZoneInfo
+from dateutil    import parser #pip install python-dateutil
+from feedparser  import parse
+from gc          import collect
+from flask       import Flask
+from threading   import Thread
 
 # CONFIGURAÇÕES
 ALTO_IMP  = "🔥 ALTO IMPACTO"
@@ -17,24 +21,85 @@ MEDIO_IMP = "⚠️ MÉDIO IMPACTO"
 BAIXO_IMP = "💤 BAIXO IMPACTO"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_USER = os.getenv("GITHUB_USER")
+GITHUB_REPO = os.getenv("GITHUB_REPO")
+GITHUB_FILE = "vistos.json"
+URL = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{GITHUB_FILE}"
 FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
 ]
 
 # FUNÇÕES
+
+# Normalização
+def normalizar_titulo(titulo):
+    t = titulo.lower()
+    t = normalize('NFKD', t) # remove acentos
+    t = t.encode('ascii', 'ignore').decode('utf-8')
+    t = sub(r'\d+', '', t)           # remove números
+    t = sub(r'[^\w\s]', '', t)       # remove pontuação
+    t = sub(r'\s+', ' ', t).strip()  # remove espaços duplicados
+    # stopwords
+    stopwords = {
+        "the", "a", "an", "to", "of", "in", "on",
+        "for", "at", "by", "with", "from",
+        "is", "are", "be", "as"
+    }
+    palavras = [
+        p for p in t.split()
+        if p not in stopwords
+    ]
+    return " ".join(palavras)
+
+def titulo_parecido(novo, vistos, limite=0.88):
+    for antigo in vistos:
+        similaridade = SequenceMatcher(None, novo, antigo).ratio()
+        if similaridade >= limite:
+            print(f"🔁 Similaridade detectada: {similaridade:.2f}")
+            return True
+    return False
+
+# GITHUB Storage
 def carregar_vistos():
+    headers = { "Authorization": f"token {GITHUB_TOKEN}" }
     try:
-        with open("vistos.json", "r") as f:
-            return set(json.load(f))
-    except:
-        return set()
+        r = get(URL, headers=headers, timeout=20)
+        if r.status_code == 200:
+            content = r.json()["content"]
+            decoded = b64decode(content).decode("utf-8")
+            dados = json.loads(decoded)
+            print(f"📥 {len(dados)} notícias carregadas do GitHub")
+            return set(dados)
+    except Exception as e:
+        print("Erro carregando vistos:", e)
+    return set()
 
 def salvar_vistos(vistos):
-    with open("vistos.json", "w") as f:
-        json.dump(list(vistos), f)
-    print("💾 Histórico salvo localmente")      
+    headers = { "Authorization": f"token {GITHUB_TOKEN}" }
+    sha = None
+    try:
+        r = get(URL, headers=headers, timeout=20)
+        if r.status_code == 200:
+            sha = r.json()["sha"]
+    except Exception as e:
+        print("Erro buscando SHA:", e)
+    try:
+        content = json.dumps(list(vistos), ensure_ascii=False, indent=2)
+        encoded = b64encode(content.encode("utf-8")).decode("utf-8")
+        data = {"message": "Atualizando vistos.json",
+                "content": encoded,
+                "sha": sha}
+        r = put(URL, headers=headers, json=data, timeout=20)
+        if r.status_code in [200, 201]:
+            print("💾 vistos.json salvo no GitHub")
+        else:
+            print("Erro salvando:", r.text)
+    except Exception as e:
+        print("Erro salvando vistos:", e)
 
+# Telegram
 def enviar_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
@@ -48,6 +113,7 @@ def enviar_telegram(msg):
     except:
         print("Erro Telegram")
 
+# Tradução
 def traduzir(texto, tentativas=2):
     from deep_translator import MyMemoryTranslator, GoogleTranslator
     for i in range(tentativas): # Tenta MyMemory
@@ -57,7 +123,6 @@ def traduzir(texto, tentativas=2):
             return translator_memory.translate(texto)
         except:
             sleep(0.5)
-
     for i in range(tentativas): # Tenta Google
         try:
             translator_google = GoogleTranslator(source='auto', target='pt')
@@ -65,9 +130,9 @@ def traduzir(texto, tentativas=2):
             return translator_google.translate(texto)
         except:
             sleep(0.5)
-
     return f"(EN) {texto}"
 
+# Datas
 def agora_brasil():
     return datetime.now(ZoneInfo("America/Sao_Paulo"))
 
@@ -83,7 +148,7 @@ def ajustar_data(pubDate, fonte):
     except Exception:
         return agora_brasil()
 
-# 🧠 RESUMO ESTILO TRADER
+# Resumos
 def resumir_trader(titulo):
     t = titulo.lower()
     if "inflation" in t or "cpi" in t:
@@ -104,42 +169,7 @@ def resumir_trader(titulo):
         return "Dólar / Treasuries → impacto direto no WDO"
     return "Notícia macro relevante"
 
-def classificar_impacto(titulo):
-    t = titulo.lower()
-    alto = ["cpi", "inflation", "interest rate", "fed", "fomc",
-            "pce", "payroll", "jobs report", "nonfarm"]
-    medio = ["gdp", "oil", "treasury", "bond", "yield"]
-    if any(k in t for k in alto):
-        return ALTO_IMP
-    elif any(k in t for k in medio):
-        return MEDIO_IMP
-    else:
-        return BAIXO_IMP
-
-def buscar(vistos):
-    noticias = []
-    for url in FEEDS:
-        try:
-            feed = parse(url)
-            for e in feed.entries:
-                titulo = e.title.strip()
-                link = e.link.strip()
-                
-                #evita duplicação de notícias
-                chave = titulo.lower().strip()
-                if chave in vistos:
-                    continue
-                vistos.add(chave)
-                noticias.append({
-                    "titulo": titulo,
-                    "link": link,
-                    "data": e.get("published", ""),
-                    "fonte": url
-                })
-        except:
-            print("Erro feed:", url)
-    return noticias
-
+# Classificação WDO
 def classificar_wdo(titulo):
     t = titulo.lower()
     score = 0
@@ -172,41 +202,70 @@ def classificar_wdo(titulo):
     breaking = any(k in t for k in ["breaking", "urgent", "alert"])
     return score, motivo, breaking
 
+def buscar(vistos):
+    noticias = []
+    for url in FEEDS:
+        try:
+            feed = parse(url)
+            entries = feed.entries[:15]
+            for e in entries:
+                titulo = e.title.strip()
+                link = e.link.strip()
+                chave = titulo.lower().strip()      # evita duplicação de notícias
+                if chave in vistos:                 # ignora repetidos
+                    continue
+                if titulo_parecido(chave, vistos):  # ignora similares
+                    continue
+                vistos.add(chave)
+                noticias.append({
+                    "titulo": titulo,
+                    "link": link,
+                    "data": e.get("published", ""),
+                    "fonte": url
+                })
+        except:
+            print("Erro feed:", url)
+    return noticias
+
 def run_once():
     global vistos
-    if len(vistos) > 500:
-        vistos = set(list(vistos)[-300:])
+    if len(vistos) > 2000:
+        vistos = set(list(vistos)[-1500:])
     noticias = buscar(vistos)
     print("Noticias encontradas:", len(noticias))
     if noticias:
         agora = agora_brasil().strftime("%d/%m %H:%M:%S")
         print(f"🔄 Atualizando {agora}")
         for n in noticias:
-            print("DEBUG:", n["titulo"])
-            data_noticia = ajustar_data(n.get("data", ""), n.get("fonte", ""))
-            if data_noticia < agora_brasil() - timedelta(hours=6):
-                continue
-            titulo_en = n['titulo']
-            titulo_pt = titulo_en if len(titulo_en) < 5 else traduzir(titulo_en)
-            resumo = resumir_trader(titulo_en)
-            score_wdo, motivos, breaking = classificar_wdo(titulo_en)
-            motivo_txt = " | ".join(motivos) if motivos else "Macro"
-            if score_wdo > 5 or breaking: # quanto menor, mais sensível
-                alerta = "🚨 BREAKING NEWS\n" if breaking else ""
-                msg = (
-                    f"{alerta}"
-                    f"🕒 {data_noticia.strftime('%H:%M')}\n"
-                    f"💰 IMPACTO WDO: {score_wdo}\n"
-                    f"📌 {motivo_txt}\n"
-                    f"📰 <b>{titulo_pt}</b>\n"
-                    f"📊 {resumo}\n"
-                    f"<a href='{n["link"]}'>Ler notícia</a>"
-                )
-                print(msg + "\n")
-                enviar_telegram(msg)
+            try:
+                print("DEBUG:", n["titulo"])
+                data_noticia = ajustar_data(n.get("data", ""), n.get("fonte", ""))
+                if data_noticia < agora_brasil() - timedelta(hours=6):
+                    continue
+                titulo_en = n['titulo']
+                titulo_pt = titulo_en if len(titulo_en) < 5 else traduzir(titulo_en)
+                resumo = resumir_trader(titulo_en)
+                score_wdo, motivos, breaking = classificar_wdo(titulo_en)
+                motivo_txt = " | ".join(motivos) if motivos else "Macro"
+                if score_wdo > 5 or breaking: # quanto menor, mais notícias
+                    alerta = "🚨 BREAKING NEWS\n" if breaking else ""
+                    msg = (
+                        f"{alerta}"
+                        f"🕒 {data_noticia.strftime('%H:%M')}\n"
+                        f"💰 IMPACTO: {score_wdo}\n"
+                        f"📌 {motivo_txt}\n"
+                        f"📰 <b>{titulo_pt}</b>\n"
+                        f"📊 {resumo}\n"
+                        f"<a href='{n["link"]}'>Ler notícia</a>"
+                    )
+                    print(msg + "\n")
+                    enviar_telegram(msg)
+            except Exception as e:
+                print("Erro notícia:", e)                    
     salvar_vistos(vistos)
     collect()
 
+# Loop
 def loop():
     print("🚀 Bot rodando continuamente...\n")
     start = time()
@@ -230,6 +289,7 @@ def home():
 def iniciar_bot():
     loop()
 
+# INÍCIO
 vistos = carregar_vistos()
 
 if __name__ == "__main__":
