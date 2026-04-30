@@ -30,6 +30,8 @@ FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
 ]
+print("USER:", GITHUB_USER)
+print("REPO:", GITHUB_REPO)
 
 # FUNÇÕES
 
