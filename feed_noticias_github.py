@@ -30,8 +30,6 @@ FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
 ]
-print("USER:", GITHUB_USER)
-print("REPO:", GITHUB_REPO)
 
 # FUNÇÕES
 
@@ -55,7 +53,7 @@ def normalizar_titulo(titulo):
     ]
     return " ".join(palavras)
 
-def titulo_parecido(novo, vistos, limite=0.88):
+def titulo_parecido(novo, vistos, limite=0.88): # para melhorar, limite=0.92
     for antigo in vistos:
         similaridade = SequenceMatcher(None, novo, antigo).ratio()
         if similaridade >= limite:
@@ -214,10 +212,12 @@ def buscar(vistos):
             for e in entries:
                 titulo = e.title.strip()
                 link = e.link.strip()
-                chave = titulo.lower().strip()      # evita duplicação de notícias
+                # evita duplicação de notícias
+                chave = normalizar_titulo(titulo) + link[-20:]
                 if chave in vistos:                 # ignora repetidos
                     continue
-                if titulo_parecido(chave, vistos):  # ignora similares
+                vistos_recentes = list(vistos)[-500:]
+                if titulo_parecido(chave, vistos_recentes, limite=0.92):
                     continue
                 vistos.add(chave)
                 noticias.append({
@@ -259,46 +259,32 @@ def run_once():
                         f"📌 {motivo_txt}\n"
                         f"📰 <b>{titulo_pt}</b>\n"
                         f"📊 {resumo}\n"
-                        f"<a href='{n["link"]}'>Ler notícia</a>"
+                        f"<a href='{n['link']}'>Ler notícia</a>"
                     )
                     print(msg + "\n")
                     enviar_telegram(msg)
             except Exception as e:
                 print("Erro notícia:", e)                    
     salvar_vistos(vistos)
-    print("📊 TOTAL VISTOS:", len(vistos))
     collect()
 
-# Loop
-def loop():
-    print("🚀 Bot rodando continuamente...\n")
-    start = time()
-    while True:
+
+# Flask - Exigência do Render
+last_run = 0
+app = Flask(__name__)
+@app.route("/")
+def home():
+    global last_run, vistos
+    agora = time()
+    if agora - last_run > 120:
+        print("🔄 Executando ciclo via request")
         try:
             run_once()
         except Exception as e:
-            print("Erro no loop:", e)
-        if time() - start > 3600:
-            print("♻️ Reiniciando processo para limpar memória...")
-            os._exit(0)
-        sleep(120)  # 2 minutos      
-
-# Flask - Exigência do Render
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "Bot rodando!"
-
-def iniciar_bot():
-    loop()
-
-# INÍCIO
-vistos = carregar_vistos()
+            print("Erro:", e)
+        last_run = agora
+    return "OK"
 
 if __name__ == "__main__":
-    print("🔥 TESTE DIRETO RUN_ONCE")
     vistos = carregar_vistos()
-    run_once()
-    #Thread(target=iniciar_bot).start()
-    #app.run(host="0.0.0.0", port=10000, threaded=False)
+    app.run(host="0.0.0.0", port=10000, threaded=False)
