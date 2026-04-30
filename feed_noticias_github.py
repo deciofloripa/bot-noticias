@@ -97,7 +97,8 @@ def salvar_vistos(vistos):
         if r.status_code in [200, 201]:
             print("💾 vistos.json salvo no GitHub")
         else:
-            print("Erro salvando:", r.text)
+            print("STATUS GITHUB:", r.status_code)
+            print("RESPOSTA:", r.text[:200])
     except Exception as e:
         print("Erro salvando vistos:", e)
 
@@ -265,6 +266,7 @@ def run_once():
             except Exception as e:
                 print("Erro notícia:", e)                    
     salvar_vistos(vistos)
+    print("📊 TOTAL VISTOS:", len(vistos))
     collect()
 
 # Loop
