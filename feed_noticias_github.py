@@ -297,5 +297,8 @@ def iniciar_bot():
 vistos = carregar_vistos()
 
 if __name__ == "__main__":
-    Thread(target=iniciar_bot).start()
-    app.run(host="0.0.0.0", port=10000, threaded=False)
+    print("🔥 TESTE DIRETO RUN_ONCE")
+    vistos = carregar_vistos()
+    run_once()
+    #Thread(target=iniciar_bot).start()
+    #app.run(host="0.0.0.0", port=10000, threaded=False)
