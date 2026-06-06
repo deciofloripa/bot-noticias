@@ -39,8 +39,6 @@ steps:
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       CHAT_ID: ${{ secrets.CHAT_ID }}
       FEED_TOKEN: ${{ secrets.FEED_TOKEN }}
-      FEED_USER: ${{ secrets.FEED_USER }}
-      FEED_REPO: ${{ secrets.FEED_REPO }}
     run: |
       python feed_noticias_github.py
 ```
