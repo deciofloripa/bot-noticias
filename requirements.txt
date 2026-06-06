@@ -1,5 +1,5 @@
 feedparser
 requests
 deep-translator
-flask
+tzdata
 python-dateutil==2.9.0.post0
