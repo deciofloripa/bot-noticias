@@ -38,9 +38,9 @@ steps:
     env:
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       CHAT_ID: ${{ secrets.CHAT_ID }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GITHUB_USER: ${{ secrets.GITHUB_USER }}
-      GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
+      FEED_TOKEN: ${{ secrets.FEED_TOKEN }}
+      FEED_USER: ${{ secrets.FEED_USER }}
+      FEED_REPO: ${{ secrets.FEED_REPO }}
     run: |
       python feed_noticias_github.py
 ```
