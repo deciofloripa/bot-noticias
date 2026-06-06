@@ -1,12 +1,6 @@
 name: Feed Noticias
 
 on:
-  schedule:
-    # Segunda a sexta
-    # 07:00 UTC = 04:00 Brasília
-    # 22:00 UTC = 19:00 Brasília
-    - cron: '*/5 * * * *'
-
   workflow_dispatch:
 
 jobs:
