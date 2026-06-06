@@ -1,31 +1,29 @@
-# Feed de notícias guardado no github e rodando 24h no Render
-import os
-import json
+# Feed de notícias guardado e executado no github
+from os          import getenv
 from unicodedata import normalize
 from re          import sub
 from difflib     import SequenceMatcher
 from base64      import b64decode, b64encode
+from json        import loads, dumps
 from requests    import get, put, post
-from time        import sleep, time
+from time        import sleep#, time
 from datetime    import datetime, timedelta
 from zoneinfo    import ZoneInfo
 from dateutil    import parser #pip install python-dateutil
 from feedparser  import parse
 from gc          import collect
-from flask       import Flask
-from threading   import Thread
 
 # CONFIGURAÇÕES
 ALTO_IMP  = "🔥 ALTO IMPACTO"
 MEDIO_IMP = "⚠️ MÉDIO IMPACTO"
 BAIXO_IMP = "💤 BAIXO IMPACTO"
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-GITHUB_USER = os.getenv("GITHUB_USER")
-GITHUB_REPO = os.getenv("GITHUB_REPO")
-GITHUB_FILE = "vistos.json"
-URL = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{GITHUB_FILE}"
+TELEGRAM_TOKEN = getenv("TELEGRAM_TOKEN")
+CHAT_ID = getenv("CHAT_ID")
+FEED_TOKEN = getenv("FEED_TOKEN")
+FEED_USER = "deciofloripa"
+FEED_REPO = "bot-noticias"
+FEED_FILE = "vistos.json"
+URL = f"https://api.github.com/repos/{FEED_USER}/{FEED_REPO}/contents/{FEED_FILE}"
 FEEDS = [
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
@@ -63,13 +61,13 @@ def titulo_parecido(novo, vistos, limite=0.88): # para melhorar, limite=0.92
 
 # GITHUB Storage
 def carregar_vistos():
-    headers = { "Authorization": f"token {GITHUB_TOKEN}" }
+    headers = { "Authorization": f"token {FEED_TOKEN}" }
     try:
         r = get(URL, headers=headers, timeout=20)
         if r.status_code == 200:
             content = r.json()["content"]
             decoded = b64decode(content).decode("utf-8")
-            dados = json.loads(decoded)
+            dados = loads(decoded)
             print(f"📥 {len(dados)} notícias carregadas do GitHub")
             return set(dados)
     except Exception as e:
@@ -77,7 +75,7 @@ def carregar_vistos():
     return set()
 
 def salvar_vistos(vistos):
-    headers = { "Authorization": f"token {GITHUB_TOKEN}" }
+    headers = { "Authorization": f"token {FEED_TOKEN}" }
     sha = None
     try:
         r = get(URL, headers=headers, timeout=20)
@@ -86,7 +84,7 @@ def salvar_vistos(vistos):
     except Exception as e:
         print("Erro buscando SHA:", e)
     try:
-        content = json.dumps(list(vistos), ensure_ascii=False, indent=2)
+        content = dumps(list(vistos), ensure_ascii=False, indent=2)
         encoded = b64encode(content.encode("utf-8")).decode("utf-8")
         data = {"message": "Atualizando vistos.json",
                 "content": encoded,
@@ -269,22 +267,11 @@ def run_once():
     collect()
 
 
-# Flask - Exigência do Render
-last_run = 0
-app = Flask(__name__)
-@app.route("/")
-def home():
-    global last_run, vistos
-    agora = time()
-    if agora - last_run > 120:
-        print("🔄 Executando ciclo via request")
-        try:
-            run_once()
-        except Exception as e:
-            print("Erro:", e)
-        last_run = agora
-    return "OK"
-
 if __name__ == "__main__":
+    print("Iniciando execução...")
     vistos = carregar_vistos()
-    app.run(host="0.0.0.0", port=10000, threaded=False)
+    try:
+        run_once()
+    except Exception as e:
+        print("Erro geral:", e)
+    print("✅ Execução concluída.")
