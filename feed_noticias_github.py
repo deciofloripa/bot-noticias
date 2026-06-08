@@ -233,6 +233,7 @@ def run_once():
     if len(vistos) > 2000:
         vistos = set(list(vistos)[-1500:])
     noticias = buscar(vistos)
+    noticias.sort(key=lambda n: ajustar_data(n.get("data", ""), n.get("fonte", "")))
     print("Noticias encontradas:", len(noticias))
     if noticias:
         agora = agora_brasil().strftime("%d/%m %H:%M:%S")
@@ -241,7 +242,7 @@ def run_once():
             try:
                 print("DEBUG:", n["titulo"])
                 data_noticia = ajustar_data(n.get("data", ""), n.get("fonte", ""))
-                if data_noticia < agora_brasil() - timedelta(hours=6):
+                if data_noticia < agora_brasil() - timedelta(minutes=45):
                     continue
                 titulo_en = n['titulo']
                 titulo_pt = titulo_en if len(titulo_en) < 5 else traduzir(titulo_en)
