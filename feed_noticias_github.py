@@ -25,9 +25,18 @@ FEED_REPO = "bot-noticias"
 FEED_FILE = "vistos.json"
 URL = f"https://api.github.com/repos/{FEED_USER}/{FEED_REPO}/contents/{FEED_FILE}"
 FEEDS = [
+    # CNBC
     "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-    "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US"#,
+    # Yahoo Finance
+    "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^DJI&region=US&lang=en-US",
+    # Reuters Business
+    "https://feeds.reuters.com/reuters/businessNews",
+    # Reuters World
+    "https://feeds.reuters.com/Reuters/worldNews",
+    # MarketWatch Top Stories
+    "https://feeds.marketwatch.com/marketwatch/topstories/"
 ]
+
 
 # FUNÇÕES
 
@@ -224,6 +233,8 @@ def buscar(vistos):
                     "data": e.get("published", ""),
                     "fonte": url
                 })
+                print(f"Feed: {url}")
+                print(f"Entradas RSS: {len(entries)}")
         except:
             print("Erro feed:", url)
     return noticias
