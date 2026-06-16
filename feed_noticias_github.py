@@ -260,7 +260,7 @@ def run_once():
                 resumo = resumir_trader(titulo_en)
                 score_wdo, motivos, breaking = classificar_wdo(titulo_en)
                 motivo_txt = " | ".join(motivos) if motivos else "Macro"
-                if score_wdo > 5 or breaking: # quanto menor, mais notícias
+                if score_wdo > 4 or breaking: # quanto menor, mais notícias
                     alerta = "🚨 BREAKING NEWS\n" if breaking else ""
                     msg = (
                         f"{alerta}"
